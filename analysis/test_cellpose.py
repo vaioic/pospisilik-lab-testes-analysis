@@ -81,6 +81,19 @@ for idx, mask in enumerate(masks):
         anti_aliasing=False,
     )
 
+    # Convert to HED
+    curr_img_hed = skimage.color.rgb2hed(curr_img)
+
+    ## TODO: Count number of brown cells
+
+    # plt.imshow(curr_img)
+    # plt.show()
+    # plt.close()
+
+    # plt.imshow(curr_img_hed[:, :, 2])
+    # plt.show()
+    # plt.close()
+
     # Write data
     skimage.io.imsave(output_dir / f"image_roi{idx:02d}.tif", curr_img)
     skimage.io.imsave(output_dir / f"mask_roi{idx:02d}.tif", mask_full)
@@ -91,6 +104,7 @@ for idx, mask in enumerate(masks):
     ov = skimage.segmentation.mark_boundaries(
         curr_img.astype(np.uint8), mask_full.astype(np.uint8)
     )
+
     skimage.io.imsave(
         output_dir / f"overlay_roi{idx:02d}.jpg", skimage.util.img_as_ubyte(ov)
     )
