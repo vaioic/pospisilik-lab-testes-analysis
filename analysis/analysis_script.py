@@ -15,9 +15,13 @@ print(f"Dimensions at Level 0 (highest res): {slide.dimensions}")
 print(f"Dimensions across all levels: {slide.level_dimensions}")
 print(f"Downsample factors per level: {slide.level_downsamples}")
 
+exit()
+
+
 ROI = [(178, 2000), (1604, 3718)]
 
 downsampled_patch = slide.read_region((0, 0), 2, slide.level_dimensions[2])
+
 
 downsampled_patch = np.array(downsampled_patch.convert("RGB"))
 

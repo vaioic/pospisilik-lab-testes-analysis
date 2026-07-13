@@ -5,6 +5,7 @@ import oic_toolkit
 import openslide
 import pandas as pd
 import skimage
+import tifffile
 from cellpose import models
 
 file = Path(r"../data/271491.svs")
@@ -33,6 +34,9 @@ downsampled_patch = slide.read_region(
     (0, 0), ds_level, slide.level_dimensions[ds_level]
 )
 downsampled_patch = np.array(downsampled_patch.convert("RGB"))
+
+print(downsampled_patch.dtype)
+exit()
 
 # print(downsampled_patch.shape)
 # print(f"Downsample: {slide.level_downsamples[ds_level]}")
@@ -95,8 +99,9 @@ for idx, mask in enumerate(masks):
     # plt.close()
 
     # Write data
-    skimage.io.imsave(output_dir / f"image_roi{idx:02d}.tif", curr_img)
-    skimage.io.imsave(output_dir / f"mask_roi{idx:02d}.tif", mask_full)
+    tifffile.imwrite(output_dir / f"image_roi{idx:02d}.tif", curr_img, compress="lzw")
+    tifffile.imwrite(output_dir / f"mask_roi{idx:02d}.tif", mask_full, compress="lzw")
+
     print(curr_img.shape)
     print(mask_full.shape)
 
