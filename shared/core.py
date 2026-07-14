@@ -149,7 +149,7 @@ def process_image(file, output_path, ds_level=2):
 
         df_current["Num_cells"] = stem_cell_counts
 
-        df_current["area_micron"] = df_current["area"] * mpp
+        df_current["area_micron"] = df_current["area"] * (mpp**2)
 
         # df_current.to_csv(f"roi_{idx:02d}.csv")
 
