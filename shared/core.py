@@ -9,7 +9,7 @@ import tifffile
 from cellpose import models
 
 
-def process_image(file, output_path, ds_level=2):
+def process_image(file, output_path, ds_level=2, is_brown=False):
 
     if not isinstance(file, Path):
         file = Path(file)
@@ -90,22 +90,39 @@ def process_image(file, output_path, ds_level=2):
             compression="lzw",
         )
 
-        # Convert to HED
-        curr_img_hed = skimage.color.rgb2hed(curr_img[::4, ::4, :])
-        img_cells = curr_img_hed[..., 2]
+        if not is_brown:
+            # Convert to HED
+            curr_img_hed = skimage.color.rgb2hed(curr_img[::4, ::4, :])
+            img_cells = curr_img_hed[..., 2]
 
-        mask_stemcell = img_cells > 0.05
-        # print(mask_stemcell.shape)
-        mask_stemcell = skimage.morphology.opening(
-            mask_stemcell, skimage.morphology.disk(2)
-        )
+            mask_stemcell = img_cells > 0.05
+            # print(mask_stemcell.shape)
+            mask_stemcell = skimage.morphology.opening(
+                mask_stemcell, skimage.morphology.disk(2)
+            )
 
-        mask_stemcell = skimage.morphology.remove_small_holes(
-            mask_stemcell, max_size=50
-        )
-        mask_stemcell = skimage.morphology.remove_small_objects(
-            mask_stemcell, max_size=5
-        )
+            mask_stemcell = skimage.morphology.remove_small_holes(
+                mask_stemcell, max_size=50
+            )
+            mask_stemcell = skimage.morphology.remove_small_objects(
+                mask_stemcell, max_size=5
+            )
+        else:
+            curr_img_ds = curr_img[::4, ::4, :]
+            image_rgb = np.array(curr_img_ds.convert("L"))
+
+            mask_stemcell = image_rgb < 40
+
+            mask_stemcell = skimage.morphology.opening(
+                mask_stemcell, skimage.morphology.disk(2)
+            )
+
+            mask_stemcell = skimage.morphology.remove_small_holes(
+                mask_stemcell, max_size=50
+            )
+            mask_stemcell = skimage.morphology.remove_small_objects(
+                mask_stemcell, max_size=400
+            )
 
         mask_stemcell = skimage.transform.resize(
             mask_stemcell,
