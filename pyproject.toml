@@ -1,5 +1,5 @@
 [project]
-name = "pospisilik-lab-testes-analysios"
+name = "pospisilik-lab-testes-analysis"
 version = "0.1.0"
 description = "Quick analysis of slide images."
 readme = "README.md"
