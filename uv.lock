@@ -1030,7 +1030,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pospisilik-lab-testes-analysios"
+name = "pospisilik-lab-testes-analysis"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

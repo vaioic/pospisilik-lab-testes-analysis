@@ -7,6 +7,7 @@ import pandas as pd
 import skimage
 import tifffile
 from cellpose import models
+from matplotlib import pyplot as plt  # noqa: F401
 
 
 def process_image(file, output_path, ds_level=2, is_brown=False):
@@ -109,20 +110,32 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
             )
         else:
             curr_img_ds = curr_img[::4, ::4, :]
-            image_rgb = np.array(curr_img_ds.convert("L"))
+            # image_rgb = np.array(curr_img_ds.convert("L"))
+            image_gray = skimage.color.rgb2gray(curr_img_ds)
 
-            mask_stemcell = image_rgb < 40
+            mask_stemcell = image_gray < 0.1
+
+            # import matplotlib.pyplot as plt
+
+            # plt.imshow(mask_stemcell)
+            # plt.show()
 
             mask_stemcell = skimage.morphology.opening(
                 mask_stemcell, skimage.morphology.disk(2)
             )
 
+            # plt.imshow(mask_stemcell)
+            # plt.show()
+
             mask_stemcell = skimage.morphology.remove_small_holes(
                 mask_stemcell, max_size=50
             )
             mask_stemcell = skimage.morphology.remove_small_objects(
-                mask_stemcell, max_size=400
+                mask_stemcell, max_size=5
             )
+
+            # plt.imshow(mask_stemcell)
+            # plt.show()
 
         mask_stemcell = skimage.transform.resize(
             mask_stemcell,
@@ -134,17 +147,20 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
 
         mask_stemcell = np.logical_and(mask_stemcell, mask_full)
 
+        mask_stemcell = skimage.morphology.remove_small_objects(
+            mask_stemcell, max_size=50
+        )
+
         labels_stemcell = skimage.measure.label(mask_stemcell)
 
         # Measure properties
         props = skimage.measure.regionprops_table(
-            mask_full, properties=("label", "eccentricity", "area")
+            mask_full, properties=("label", "eccentricity", "area", "perimeter")
         )
 
         stem_cell_counts = []
 
         for p in range(len(props["label"])):
-            #
             curr_tubule_mask = mask_full == props["label"][p]
 
             curr_stem_cell_labels = labels_stemcell[curr_tubule_mask]
@@ -167,6 +183,7 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
         df_current["Num_cells"] = stem_cell_counts
 
         df_current["area_micron"] = df_current["area"] * (mpp**2)
+        df_current["perimeter_micron"] = df_current["perimeter"] * mpp
 
         # df_current.to_csv(f"roi_{idx:02d}.csv")
 
@@ -176,7 +193,9 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
         ov = skimage.segmentation.mark_boundaries(
             curr_img.astype(np.uint8), mask_full.astype(np.uint8)
         )
-        ov = skimage.segmentation.mark_boundaries(ov, labels_stemcell.astype(np.uint8))
+        ov = skimage.segmentation.mark_boundaries(
+            ov, labels_stemcell.astype(np.uint8), color=(1, 0, 1)
+        )
 
         skimage.io.imsave(
             output_path / f"overlay_roi{idx:02d}.jpg", skimage.util.img_as_ubyte(ov)
