@@ -62,13 +62,20 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
 
     # Use Cellpose to segment the tubules
     model = models.CellposeModel(gpu=True)
-    masks, _, _ = model.eval(imgs_ds, flow_threshold=0.4, cellprob_threshold=0.0)
+    print("Segmenting tubules")
+    tubule_masks, _, _ = model.eval(imgs_ds, flow_threshold=0.4, cellprob_threshold=0.0)
 
     # Analyze data
     all_data = []
 
-    for idx, mask in enumerate(masks):
+    for idx, mask in enumerate(tubule_masks):
         curr_img = imgs[idx]
+
+        print("Segmenting cells")
+        curr_img_ds = curr_img[::2, ::2, :]
+        cell_masks, _, _ = model.eval(
+            curr_img_ds, flow_threshold=0.6, cellprob_threshold=-1.0
+        )
 
         # Resize the mask back to the full size
         mask_full = skimage.transform.resize(
@@ -79,15 +86,33 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
             anti_aliasing=False,
         )
 
+        # Get the cell mask (already full size)
+        cell_mask_full = skimage.transform.resize(
+            cell_masks,
+            curr_img.shape[:2],
+            preserve_range=True,
+            order=0,
+            anti_aliasing=False,
+        )
+
+        cell_mask_full[mask_full == 0] = 0
+
         # Export images and mask
         tifffile.imwrite(
             output_path / f"image_roi{idx:02d}.tif",
             curr_img.astype(np.uint8),
             compression="lzw",
         )
+
         tifffile.imwrite(
             output_path / f"mask_roi{idx:02d}.tif",
-            mask_full.astype(np.uint8),
+            mask_full.astype(np.uint16),
+            compression="lzw",
+        )
+
+        tifffile.imwrite(
+            output_path / f"cellmask_roi{idx:02d}.tif",
+            cell_mask_full.astype(np.uint32),
             compression="lzw",
         )
 
@@ -189,6 +214,17 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
 
         all_data.append(df_current)
 
+        # Measure the intensity of all the cells
+        # TODO: Do I need to add tubule ID?
+        props_all_cells = skimage.measure.regionprops_table(
+            cell_mask_full,
+            skimage.color.rgb2gray(curr_img),
+            properties=("label", "centroid", "mean_intensity", "area"),
+        )
+
+        df_cells = pd.DataFrame(props_all_cells)
+        df_cells.to_csv(output_path / f"cell_data_roi{idx:02d}.csv", index=False)
+
         # Export the overlay
         ov = skimage.segmentation.mark_boundaries(
             curr_img.astype(np.uint8), mask_full.astype(np.uint8)
@@ -199,6 +235,20 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
 
         skimage.io.imsave(
             output_path / f"overlay_roi{idx:02d}.jpg", skimage.util.img_as_ubyte(ov)
+        )
+
+        overlay = skimage.color.label2rgb(
+            cell_mask_full,
+            image=curr_img,
+            bg_label=0,
+            bg_color=None,
+            alpha=0.3,
+            kind="overlay",
+        )
+
+        skimage.io.imsave(
+            output_path / f"cell_overlay_roi{idx:02d}.jpg",
+            skimage.util.img_as_ubyte(overlay),
         )
 
     # Combine all data and export to CSV
