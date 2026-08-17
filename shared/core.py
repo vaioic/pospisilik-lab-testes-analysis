@@ -216,13 +216,27 @@ def process_image(file, output_path, ds_level=2, is_brown=False):
 
         # Measure the intensity of all the cells
         # TODO: Do I need to add tubule ID?
+
+        # Tubule information
         props_all_cells = skimage.measure.regionprops_table(
             cell_mask_full,
             skimage.color.rgb2gray(curr_img),
             properties=("label", "centroid", "mean_intensity", "area"),
         )
 
+        # Also get the tubule ID
+        props_all_cells_tubule_id = skimage.measure.regionprops_table(
+            cell_mask_full,
+            mask_full,
+            properties=("intensity_min",),
+        )
+
         df_cells = pd.DataFrame(props_all_cells)
+
+        df_cells_tubule_id = pd.DataFrame(props_all_cells_tubule_id)
+
+        df_cells["tubule_id"] = df_cells_tubule_id["intensity_min"]
+
         df_cells.to_csv(output_path / f"cell_data_roi{idx:02d}.csv", index=False)
 
         # Export the overlay
